@@ -7,37 +7,35 @@
 
 struct NODE{
     char info;
-    char arr[100];
-    struct NODE *next;
-};
-
-struct NODE1{
-    char arr[100];
     struct NODE *next;
 };
 
 /*--------------------------------FUNCTION PROTOTYPES-----------------------------------*/
-void evaluate(struct NODE **queu, struct NODE **stack);
+void push(struct NODE **stack, struct NODE **queue);
+int pop(struct NODE **stack);
+int dequeue(struct NODE **queue);
+void pushString(struct NODE **stack, struct NODE **answer);
 void initialize(struct NODE **queu, struct NODE **stack);
 int stackDigit(char digit2);
-void greater(struct NODE **stack, char digit);
+void greater(struct NODE **stack, struct NODE **tempInfo);
 void ifQ(struct NODE **queu, char digit);
-void veryStartOfStack(struct NODE **queu, struct NODE **stack, char digit, int value);
-void notGreater(char digit, struct NODE **stack, struct NODE **queu);
+int precedence(char digit1, char digit2);
+//void veryStartOfStack(struct NODE **queu, struct NODE **stack, char digit, int value);
+void notGreater(struct NODE **stack, struct NODE **temp, struct NODE **queu);
 int is_operator(char digit);
 
 /*--------------------------------MAIN FUNCTION-----------------------------------*/
 
 int main() {
-    struct NODE *queu; //Main basis for queu; Queu is adding at the last
+    struct NODE *queu = NULL; //Main basis for queu; Queu is adding at the last
     struct NODE *stack = NULL; //Main basis for stack; Stack is adding at the beginning
-    struct NODE *stackForEvaluate;
     char entry[50];
     unsigned long length;
     int count = 0;
     int value;
     char digit;
-    int stackValue;
+    struct NODE *tempQueue;
+    struct NODE *stackStorageTmp;
     
     initialize(&queu, &stack);
     
@@ -47,40 +45,45 @@ int main() {
     
     length = strlen(entry);
     
-    while (count<=length) {
+    while (count<= (length-1)) {
         digit = entry[count];
-        if (count==length) {
-            value = 1;
-        } else {
-            value = is_operator(digit);
-        }
+        value = is_operator(digit);
         
-        if (value==0) {
+        if (value==0){
             ifQ(&queu, digit);
-        }else{
-            if (stack!=NULL) {
-                stackValue = is_operator(stack->info);
-                if (value<=stackValue) {
-                    do {
-                        notGreater(digit, &stack, &queu);
-                        if ((stack==NULL)&&(count==length-1)) {
-                            break;
-                        }
-                        if (stack==NULL) {
-                            greater(&stack, digit);
-                            stackValue = 0;
-                        }else{
-                            stackValue = is_operator(stack->info);
-                        }
-                    } while (value<=stackValue);
-                } else {
-                    greater(&stack, digit);
+        }else {
+            struct NODE *tempInfo;
+            tempInfo = (struct NODE*)malloc(sizeof(struct NODE));
+            tempInfo->info = digit;
+            tempInfo->next = NULL;
+            if (stack == NULL) stack = tempInfo;
+            else {
+                struct NODE *temp = stack;
+                while (temp!=NULL) {
+                    if (precedence(tempInfo->info, temp->info) == 1) greater(&stack, &tempInfo);
+                    else if (precedence(tempInfo->info, temp->info) == 0) notGreater(&stack, &temp, &queu);
+                    temp = temp->next;
                 }
-            }else{
-                veryStartOfStack(&queu, &stack, digit, value);
+                if (stack == NULL) stack = tempInfo;
             }
         }
         count++;
+    }
+    
+    tempQueue = queu;
+    while (tempQueue->next!=NULL) {
+        tempQueue = tempQueue->next;
+    }
+    while (stack!=NULL) {
+        stackStorageTmp = (struct NODE*)malloc(sizeof(struct NODE));
+        stackStorageTmp->info = stack->info;
+        tempQueue->next = stackStorageTmp;
+        if (tempQueue->next!=NULL) {
+            tempQueue = tempQueue->next;
+        }
+        if (stack!=NULL) {
+            stack = stack->next;
+        }
     }
     
     //Diplay final queu-------------------------------
@@ -93,30 +96,116 @@ int main() {
     }
     
     
-    /*
-     OPTIONAL TO PRINT STACK
-     struct NODE *tmpS;
-     tmpS = stack;
-     printf("\nResult for Stack: ");
-     while (tmpS!=NULL) {
-     printf("%c", tmpS->info);
-     tmpS = tmpS->next;
-     }
-     
-     //Start of evaluating queue
-     
-     while (queu!=NULL) {
-     evaluate(&queu, &stack);
-     }*/
+    
+    /*OPTIONAL TO PRINT STACK
+    struct NODE *tmpS;
+    tmpS = stack;
+    printf("\nResult for Stack: ");
+    while (tmpS!=NULL) {
+        printf("%c", tmpS->info);
+        tmpS = tmpS->next;
+    }*/
     
     //LAB03 Ma'am Maui:
-    evaluate(&queu, &stackForEvaluate);
+    char digit1;
+    char digit2;
+    char operator;
+    int opValueForEval = 0;
+    struct NODE *stackForEvaluate;
+    int num1;
+    int num2;
+    struct NODE *newNodeEval;
+    char dequeueChar;
+    int answer;
+    int opValue = 0;
+    stackForEvaluate = NULL;
+    stack = NULL;
+    
+    while (queu!=NULL) {
+        newNodeEval = (struct NODE*)malloc(sizeof(struct NODE));
+        newNodeEval->next = NULL;
+        do {
+            push(&stackForEvaluate, &queu);
+            dequeueChar= dequeue(&queu);
+            opValue = is_operator(dequeueChar);
+            
+        } while (opValue==0);
+        
+        
+        operator = pop(&stackForEvaluate);
+        printf("\nOperator: %c", operator);
+        digit1 = pop(&stackForEvaluate);
+        printf("DIGIT 1: %c", digit1);
+        num1 = digit1 - '0';
+    
+        printf("\nNum1: %d", num1);
+        digit2 = pop(&stackForEvaluate);
+        num2 = digit2 - '0';
+        printf("\nNum2: %d", num2);
+        
+        if (operator=='*') {
+            opValueForEval = 4;
+        }else if (operator=='/'){
+            opValueForEval = 3;
+        }else if (operator=='+'){
+            opValueForEval = 2;
+        }else if (operator=='-'){
+            opValueForEval = 1;
+        }
+
+        switch (opValueForEval) {
+            case 1:
+                answer = num2 - num1;
+                break;
+            case 2:
+                answer = num1 + num2;
+                break;
+            case 3:
+                answer = num1 / num2;
+                break;
+            case 4:
+                answer = num1 * num2;
+                break;
+        }
+        
+        char intToChar;
+        
+        intToChar = answer + '0';
+        newNodeEval->info = intToChar;
+
+        pushString(&stackForEvaluate, &newNodeEval);
+        printf("\nAnswer: %d", answer);
+        struct NODE *tempQ;
+        tempQ = queu;
+        printf("\nResult for Queu: ");
+        while (tempQ!=NULL) {
+            printf("%c", tempQ->info);
+            tempQ = tempQ->next;
+        }
+        
+        struct NODE *tempS;
+        tempS = stackForEvaluate;
+        printf("\nResult for Stack:");
+        while (tempS!=NULL) {
+            printf("%c", tempS->info);
+            tempS = tempS->next;
+        }
+        
+        
+        
+        
+    }
+    
+    struct NODE *tempS;
+    int finalValue;
+    tempS = stackForEvaluate;
+    finalValue = tempS->info - '0';
+    printf("\nFINAL Value of Stack: %d ", finalValue);
+
     
     return 0;
+    
 }
-
-/*--------------------------------END OF MAIN FUNCTION-----------------------------------*/
-
 /*--------------------------------START OF FUNCTIONS------------------------------------*/
 
 
@@ -136,17 +225,24 @@ int is_operator(char digit) {
         return 0; //Returns '0' if number
     }
 }
+int precedence(char digit1, char digit2) {
+    if (digit1 == '*' && digit2 == '+') return 1;
+    if (digit1 == '*' && digit2 == '-') return 1;
+    if (digit1 == '/' && digit2 == '+') return 1;
+    if (digit1 == '/' && digit2 == '-') return 1;
+    return 0;
+}
 
 /*3. ADD NUMBERS TO QUEU
  If one of the inputs is a number, it will be put in the queu list*/
 void ifQ(struct NODE **queu, char digit){
+    
     struct NODE *prev;
     struct NODE *newInfo;
     prev = *queu;
     newInfo = (struct NODE*)malloc(sizeof(struct NODE));
     newInfo->info = digit;
     newInfo->next = NULL;
-    
     if(*queu==NULL){
         *queu = newInfo;
     }else{
@@ -155,171 +251,94 @@ void ifQ(struct NODE **queu, char digit){
         }
         prev->next = newInfo;
     }
+    
 }
 
 /*4. OPERATOR IN THE STRING INPUTTED BY USER IS LESS THAN THE OPERATOR IN STACK (BASED ON PRECEDENCE)
  To put the element in stack into the linked list queu until the digit is greater than the operator in stack.*/
-void notGreater(char digit, struct NODE **stack, struct NODE **queu){
-    struct NODE *tempQueu;
-    struct NODE *tempInfo;
-    
-    tempInfo = (struct NODE*)malloc(sizeof(struct NODE));
-    tempQueu = *queu; //Traveller from node to node to access the last node of queu
-    tempInfo->info = (*stack)->info; //Stores the information of stack and is no way connected to the linked list stack
-    tempInfo->next = NULL;
-    while (tempQueu->next!= NULL) { //Loop to find the last node of queu
-        tempQueu = tempQueu->next;
+void notGreater(struct NODE **stack, struct NODE **temp, struct NODE **queu){
+    struct NODE *tempQueu = *queu;
+    struct NODE *newInfo;
+    newInfo = (struct NODE*) malloc (sizeof(struct NODE));
+    newInfo->info = (*temp)->info; //Stores the information of stack and is no way connected to the linked list stack
+    newInfo->next = NULL;
+    *stack = (*temp)->next; //The first node of stack will move on to the next node in stack.
+    if (*queu == NULL) *queu = newInfo;
+    else {
+        while (tempQueu->next!= NULL) { //Loop to find the last node of queu
+            tempQueu = tempQueu->next;
+        }
+        tempQueu->next = newInfo; //Assigning/moving the first node of stack to queu
     }
-    tempQueu->next = tempInfo; //Assigning/moving the first node of stack to queu
-    *stack = (*stack)->next; //The first node of stack will move on to the next node in stack.
     
 }
 
 /*5. OPERATOR IN THE STRING INPUTTED BY USER IS GREATER THAN THE OPERATOR IN STACK (BASED ON PRECEDENCE)*/
-void greater(struct NODE **stack, char digit){
-    struct NODE *newInfo;
-    newInfo = (struct NODE*)malloc(sizeof(struct NODE));
-    newInfo->info = digit;
-    if ((*stack)==NULL) {
-        *stack = newInfo;
-    } else {
-        newInfo->next = *stack; //Connects the node to the first node of stack and is starting to insert itself before the first node
-        *stack = newInfo; //newInfo now becomes the first node
-    }
-    
+void greater(struct NODE **stack, struct NODE **tempInfo){
+    (*tempInfo)->next = *stack; //Connects the node to the first node of stack and is starting to insert itself before the first node
+    *stack = *tempInfo; //newInfo now becomes the first node
 }
 
 /*6. IF STACK IS EMPTY, THE OPERATOR WILL BE ASSIGNED AS THE FIRST NODE*/
-void veryStartOfStack(struct NODE **queu, struct NODE **stack, char digit, int value){
+/*void veryStartOfStack(struct NODE **queu, struct NODE **stack, char digit, int value){
+ struct NODE *newInfo;
+ newInfo = (struct NODE*)malloc(sizeof(struct NODE));
+ newInfo->info = digit;
+ newInfo->next = NULL;
+ *stack = newInfo; //Assigns newInfo to stack
+ }*/
+
+//ADDITIONAL FOR LAB3
+void push(struct NODE **stack, struct NODE **queue){
     struct NODE *newInfo;
+    char character = (*queue)->info;
     newInfo = (struct NODE*)malloc(sizeof(struct NODE));
-    newInfo->info = digit;
-    newInfo->next = NULL;
-    *stack = newInfo; //Assigns newInfo to stack
+    if (*stack==NULL) {
+        newInfo->info = character;
+        *stack = newInfo;
+    }else{
+        newInfo->info = character;
+        newInfo->next = (*stack);
+        *stack = newInfo;
+    }
 }
 
-/*7. Compute*/
-void evaluate(struct NODE **queu, struct NODE **stack){
+void pushString(struct NODE **stack, struct NODE **answer){
     struct NODE *newInfo;
-    struct NODE *tempQueu = *queu;
-    struct NODE *tmpQ;
-    struct NODE *tmpS;
-    char *stackChar = NULL;
-    int opValue = 0;
-    int value = 2;
-    int count = 0;
-    int num1 = 0;
-    int num2 = 0;
-    int ans = 0;
-    int n, c;
-    char character;
-    struct NODE *converted;
-    converted = (struct NODE*)malloc(sizeof(struct NODE));
-    char convertedAns;
-    char tmpNum1[100];
-    char tmpNum2[100];
-    
-    *stack = NULL;
-    
-    do {
-        while (tempQueu!=NULL && value!=1) {
-            newInfo = (struct NODE*)malloc(sizeof(struct NODE));
-            character = (tempQueu)->info;
-            newInfo->info = character;
-            newInfo->next = NULL;
-            if (character == '*' || character == '/' || character == '+' || character == '-'){
-                tmpQ = tempQueu;
-                free(tmpQ);
-                value = 1;
-            }else {
-                if (stack==NULL) {
-                    tmpQ = tempQueu;
-                    *stack = newInfo; //Assigns newInfo to stack
-                    printf("Stack: %c", (*stack)->info);
-                    free(tmpQ);
-                    value = 2;
-                } else {
-                    tmpQ = tempQueu;
-                    free(tmpQ);
-                    newInfo->next = *stack;
-                    *stack = newInfo;
-                    value = 2;
-                }
-            }
-            tempQueu = tempQueu->next;
-        }
-        
-        //TESTER
-        struct NODE *tmp;
-        tmp = *stack;
-        printf("\nResult for Stack: ");
-        while (tmp!=NULL) {
-            printf("%c", tmp->info);
-            tmp = tmp->next;
-        }
-        
-         while (count<2) {;
-             if (count==0) {
-                 num1 = (*stack)->info - '0';
-                 //num1 = atoi(stackChar);
-                 printf("\nNum1: %d", num1);
-                 tmpS = *stack;
-                 *stack = (*stack)->next;
-                 free(tmpS);
-             
-             } else {
-                 //num2 = atoi(&(*stack)->info);
-                 num2 = (*stack)->info - '0';
-                 printf("\nNum2: %d", num2);
-                 tmpS = *stack;
-                 *stack = (*stack)->next;
-                 free(tmpS);
-             }
-             count++;
-         }
-         
-         if (newInfo->info == '*') {
-             opValue = 4;
-         } else if(newInfo->info == '/'){
-             opValue = 3;
-         } else if(newInfo->info == '+'){
-             opValue = 2;
-         }else if(newInfo->info == '-'){
-             opValue = 1;
-         }
-         
-         if (opValue == 4 || opValue == 3 || opValue == 2 || opValue == 1) {
-         switch (opValue) {
-         case 1:
-         ans = num1 - num2;
-         break;
-         case 2:
-         ans = num1 + num2;
-         break;
-         case 3:
-         ans = num1/num2;
-         break;
-         case 4:
-         ans = num1*num2;
-         break;
-         }
-         }
-         
-         
-         //convertedAns = sprintf(storage, "%d", ans);
-         converted->info = convertedAns;
-         if ((*stack)==NULL) {
-         (*stack) = converted;
-         }else{
-         converted->next = *stack;
-         *stack = converted;
-         }
-         
-        
-    } while (queu!=NULL);
-    
-    // printf("Result: %c", (*stack)->info);
+    newInfo = (struct NODE*)malloc(sizeof(struct NODE));
+    newInfo->info = (*answer)->info;
+    if (*stack==NULL) {
+        *stack = newInfo;
+    }else{
+        newInfo->next = (*stack);
+        *stack = newInfo;
+    }
 }
+
+
+int pop(struct NODE **stack){
+    struct NODE *tmp;
+    char character;
+    tmp = *stack;
+    character = (tmp)->info;
+    if (*stack!=NULL) {
+        *stack = (*stack)->next;
+    }
+    free(tmp);
+    return character;
+}
+
+
+int dequeue(struct NODE **queue){
+    struct NODE *tmp;
+    char character;
+    tmp = *queue;
+    character = tmp->info;
+    *queue = (*queue)->next;
+    free(tmp);
+    return character;
+}
+
 
 
 /*--------------------------------END OF FUNCTIONS-----------------------------------*/
